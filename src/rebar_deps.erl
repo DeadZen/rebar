@@ -72,11 +72,21 @@ preprocess(Config, _) ->
     %%
     %% Also, if skip_deps=comma,separated,app,list, then only the given
     %% dependencies are skipped.
-    NewConfig = case rebar_config:get_global(Config3, skip_deps, false) of
+
+    SkipDeps = case rebar_config:get_global(Config3, only_deps, false) of
+        false -> false;
+        _ -> "true"
+    end,
+    NewConfig = case rebar_config:get_global(Config3, skip_deps, SkipDeps) of
         "true" ->
+            OnlyDeps = rebar_config:get_global(Config3, only_deps, []),
+            OnlyApps = [list_to_atom(App) || App <- string:tokens(OnlyDeps, ",")],
             lists:foldl(
-                fun(#dep{dir = Dir}, C) ->
-                        rebar_config:set_skip_dir(C, Dir)
+                fun(#dep{dir = Dir, app = App}, C) ->
+                        case not lists:member(App, OnlyApps) of
+                            true -> rebar_config:set_skip_dir(C, Dir);
+                            false -> C
+                        end
                 end, Config3, AvailableDeps);
         Apps when is_list(Apps) ->
             SkipApps = [list_to_atom(App) || App <- string:tokens(Apps, ",")],

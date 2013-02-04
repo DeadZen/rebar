@@ -50,7 +50,25 @@ preprocess(Config, _) ->
             Check = check_loop(Cwd),
             ok = lists:foreach(Check, Subdirs0),
             Subdirs = [filename:join(Cwd, Dir) || Dir <- Subdirs0],
-            {ok, Subdirs}
+            SkipSubs = case rebar_config:get_global(Config, only_subs, false) of
+                false -> false;
+                _ -> "true"
+            end,
+            case rebar_config:get_global(Config, skip_subs, SkipSubs) of
+                "true" ->
+                    OnlySubs = rebar_config:get_global(Config, only_subs, []),
+                    OnlySubDirs = [App || App <- string:tokens(OnlySubs, ",")],
+
+                    {ok, lists:foldl(
+                        fun(Dir, A) ->
+                            case lists:member(Dir, OnlySubDirs) of
+                                true -> [filename:join(Cwd, Dir)|A];
+                                false -> A
+                            end
+                        end, [], Subdirs0)};
+                _ -> 
+                    {ok, Subdirs}
+            end
     end.
 
 %% ===================================================================
