@@ -357,12 +357,16 @@ find_deps(Config, Mode, [{App, VsnRegex, Source} | Rest], Acc) ->
     find_deps(Config, Mode, [{App, VsnRegex, Source, []} | Rest], Acc);
 find_deps(Config, Mode, [{App, VsnRegex, Source, Opts} | Rest], Acc)
   when is_list(Opts) ->
+    Raw = case proplists:get_value(raw, Opts, false) of
+        false -> false;
+        RD -> RD
+    end,
     Dep = #dep { app = App,
                  vsn_regex = VsnRegex,
                  source = Source,
                  %% dependency is considered raw (i.e. non-Erlang/OTP) when
                  %% 'raw' option is present
-                 is_raw = proplists:get_value(raw, Opts, false) },
+                 is_raw = Raw },
     {Config1, {Availability, FoundDir}} = find_dep(Config, Dep),
     find_deps(Config1, Mode, Rest,
               acc_deps(Mode, Availability, Dep, FoundDir, Acc));
