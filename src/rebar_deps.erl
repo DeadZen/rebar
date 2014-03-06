@@ -472,7 +472,24 @@ is_app_available(Config, App, _VsnRegex, Path, _IsRaw = true) ->
             ?WARN("Expected ~s to be a raw dependency directory, "
                   "but no directory found.\n", [Path]),
             {Config, {false, {missing_raw_dependency_directory, Path}}}
-    end.
+    end;
+is_app_available(Config, App, _VsnRegex, Path, IsRaw) ->
+    DirPath = case IsRaw of
+        true -> Path;
+        RawDir  -> filename:join([rebar_config:get_xconf(Config, base_dir, []), RawDir])
+    end,
+    ?DEBUG("is_app_available, looking for Raw Dependency ~p with Path ~p~n", [App, DirPath]),
+    case filelib:is_dir(DirPath) of
+         true ->
+             %% TODO: look for version string in <Path>/VERSION file? Not clear
+             %% how to detect git/svn/hg/{cmd, ...} settings that can be passed
+             %% to rebar_utils:vcs_vsn/2 to obtain version dynamically
+            {Config, {true, DirPath}};
+         false ->
+             ?WARN("Expected ~s to be a raw dependency directory, "
+                  "but no directory found.\n", [DirPath]),
+            {Config, {false, {missing_raw_dependency_directory, DirPath}}}
+     end.
 
 use_source(Config, Dep) ->
     use_source(Config, Dep, 3).
